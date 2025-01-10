@@ -9,6 +9,7 @@ import streamlit as st
 from PIL import Image
 
 import torch
+import torch_xla.core.xla_model as xm
 
 from riffusion.datatypes import InferenceInput, PromptInput
 from riffusion.spectrogram_params import SpectrogramParams
@@ -363,7 +364,14 @@ def prepare_interpolation(
     print(init_image_file)
 
     # Determine the device automatically
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # Determine the device automatically
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif xm.xla_device_hw() == "TPU":
+        device = xm.xla_device()
+    else:
+        device = "cpu"
+
     print(f"Using device: {device}")
 
     if not prompt_a or not prompt_b:
