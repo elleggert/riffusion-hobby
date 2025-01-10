@@ -18,3 +18,5 @@ torch
 torchaudio
 torchvision
 transformers
+huggingface_hub==0.25.0
+

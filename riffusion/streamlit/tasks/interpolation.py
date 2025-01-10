@@ -8,6 +8,8 @@ import pydub
 import streamlit as st
 from PIL import Image
 
+import torch
+
 from riffusion.datatypes import InferenceInput, PromptInput
 from riffusion.spectrogram_params import SpectrogramParams
 from riffusion.streamlit import util as streamlit_util
@@ -238,6 +240,49 @@ def get_prompt_inputs(
 
     return p
 
+def create_prompt_input(
+    prompt: str,
+    include_negative_prompt: bool = False,
+    seed: int = 42,
+    denoising: float = 0.5,
+    negative_prompt: str = ''
+) -> PromptInput:
+    """
+    Create a PromptInput object based on the given arguments and validate the inputs.
+
+    Arguments:
+        prompt: The main text prompt.
+        include_negative_prompt: Whether to include a negative prompt.
+        seed: Random seed for generating the result.
+        denoising: The amount of denoising to apply.
+        negative_prompt: Optional negative prompt text.
+
+    Returns:
+        A PromptInput object with the validated attributes.
+    """
+
+    # Validate inputs (simple example: ensuring positive values for seed and denoising)
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError("Prompt must be a non-empty string.")
+    
+    if not isinstance(seed, int) or seed < 0:
+        raise ValueError("Seed must be a non-negative integer.")
+    
+    if not isinstance(denoising, (float, int)) or not (0 <= denoising <= 1):
+        raise ValueError("Denoising must be a float between 0 and 1.")
+    
+    if include_negative_prompt and not isinstance(negative_prompt, str):
+        raise ValueError("Negative prompt must be a string.")
+
+    # Create and return the PromptInput instance
+    return PromptInput(
+        prompt=prompt,
+        negative_prompt=negative_prompt if include_negative_prompt else '',
+        seed=seed,
+        denoising=denoising
+    )
+
+
 
 @st.cache_data
 def run_interpolation(
@@ -278,3 +323,109 @@ def run_interpolation(
     )
 
     return image, audio_bytes
+
+
+
+def prepare_interpolation(
+    extension: str,
+    num_interpolation_steps: int,
+    num_inference_steps: int,
+    guidance: float,
+    init_image_name: str = 'og_beat',
+    init_image_file: T.Optional[io.BytesIO] = None,
+    alpha_power: float = 1.0,
+    show_individual_outputs: bool = False,
+    show_images: bool = False,
+    prompt_a: PromptInput = None,
+    prompt_b: PromptInput = None,
+) -> T.Optional[io.BytesIO]:
+    """
+    Interpolates between two prompts in the latent space and generates audio output.
+
+    Arguments:
+        device: The device to run inference on, e.g., "cpu" or "cuda".
+        extension: The audio file extension, e.g., "wav" or "mp3".
+        num_interpolation_steps: Number of steps to interpolate between the prompts.
+        num_inference_steps: Number of denoising steps per model run.
+        guidance: How much the model listens to the text prompt.
+        init_image_name: Name of the seed image to use.
+        init_image_file: Custom seed image file, if any.
+        alpha_power: Power scaling to customize the interpolation curve.
+        show_individual_outputs: Whether to show each individual output.
+        show_images: Whether to display the generated images.
+        prompt_a: The starting prompt (PromptInput instance).
+        prompt_b: The ending prompt (PromptInput instance).
+
+    Returns:
+        BytesIO object containing the generated audio or None if an error occurs.
+    """
+ 
+    print(init_image_file)
+
+    # Determine the device automatically
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using device: {device}")
+
+    if not prompt_a or not prompt_b:
+        raise ValueError("Both prompts (prompt_a and prompt_b) must be provided for interpolation.")
+
+    if init_image_name == "custom":
+        if not init_image_file:
+            raise ValueError("Custom seed image file must be provided when using 'custom'.")
+        #init_image = Image.open(init_image_file).convert("RGB")
+        init_image = init_image_file.convert("RGB")
+        print(init_image)
+
+        
+    else:
+        init_image_path = (
+            Path(__file__).parent.parent.parent.parent / "seed_images" / f"{init_image_name}.png"
+        )
+        init_image = Image.open(str(init_image_path)).convert("RGB")
+
+    alphas = np.linspace(0, 1, num_interpolation_steps)
+
+    # Apply power scaling to alphas to customize the interpolation curve
+    alphas_shifted = alphas * 2 - 1
+    alphas_shifted = (np.abs(alphas_shifted) ** alpha_power * np.sign(alphas_shifted) + 1) / 2
+    alphas = alphas_shifted
+
+    image_list: T.List[Image.Image] = []
+    audio_bytes_list: T.List[io.BytesIO] = []
+
+    for i, alpha in enumerate(alphas):
+        inputs = InferenceInput(
+            alpha=float(alpha),
+            num_inference_steps=num_inference_steps,
+            seed_image_id="og_beat",
+            start=prompt_a,
+            end=prompt_b,
+        )
+
+        image, audio_bytes = run_interpolation(
+            inputs=inputs,
+            init_image=init_image,
+            device=device,
+            extension=extension,
+        )
+
+        if show_individual_outputs:
+            print(f"#### ({i + 1} / {len(alphas)}) Alpha={alpha:.2f}")
+            if show_images:
+                image.show()
+
+        image_list.append(image)
+        audio_bytes_list.append(audio_bytes)
+
+    # Concatenate audio segments
+    audio_segments = [pydub.AudioSegment.from_file(audio_bytes) for audio_bytes in audio_bytes_list]
+    concat_segment = audio_segments[0]
+    for segment in audio_segments[1:]:
+        concat_segment = concat_segment.append(segment, crossfade=0)
+
+    final_audio_bytes = io.BytesIO()
+    concat_segment.export(final_audio_bytes, format=extension)
+    final_audio_bytes.seek(0)
+
+    return final_audio_bytes
+
