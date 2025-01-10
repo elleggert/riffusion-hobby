@@ -141,4 +141,5 @@ dmypy.json
 .pyre/
 
 #test data
-test/test_data/
+test/test_data/wende_sample.wav
+test/test_data/basic_sample.wav
