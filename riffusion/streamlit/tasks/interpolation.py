@@ -365,11 +365,15 @@ def prepare_interpolation(
 
     # Determine the device automatically
     # Determine the device automatically
+
+    import jax
+
     if torch.cuda.is_available():
         device = "cuda"
-    elif xm.xla_device_hw() == "TPU":
-        device = xm.xla_device()
-    else:
+    try:
+        jax.devices("TPU")  # Check for TPU
+        device = jax.devices("TPU")[0]
+    except RuntimeError:
         device = "cpu"
 
     print(f"Using device: {device}")
