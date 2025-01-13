@@ -281,7 +281,7 @@ def create_prompt_input(
         negative_prompt=negative_prompt if include_negative_prompt else '',
         seed=seed,
         denoising=denoising,
-        guidance=1.0,
+        guidance=guidance,
     )
 
 
