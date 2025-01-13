@@ -366,18 +366,14 @@ def prepare_interpolation(
     # Determine the device automatically
     # Determine the device automatically
 
-    import torch
-    import torch_xla.core.xla_model as xm
-
+    
     # Check and assign the device
-    try:
-        # Check if TPU is available via torch_xla
-        device = xm.xla_device()  # Assign the TPU device
-        print(f"Using device: {device}")  # Prints TPU device details
-    except RuntimeError as e:
-        # If TPU isn't available, check for GPU or fallback to CPU
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {device}")  #
+    if torch.cuda.is_available():
+        device = torch.device("cuda")  # Assign GPU device
+        print(f"Using GPU device: {device}")  # Prints GPU device details
+    else:
+        device = torch.device("cpu")  # Fall back to CPU
+        print(f"Using CPU device: {device}")  
 
 
 
