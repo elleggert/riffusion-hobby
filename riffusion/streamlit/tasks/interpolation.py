@@ -367,20 +367,17 @@ def prepare_interpolation(
     # Determine the device automatically
 
     import torch
-    import jax
     import torch_xla.core.xla_model as xm
 
     # Check and assign the device
     try:
-        # Check if TPU is available via JAX
-        tpu_devices = jax.devices("TPU")
-        if tpu_devices:
-            device = tpu_devices[0]  # Assign the first TPU device
-        else:
-            raise RuntimeError("No TPU devices found.")
-    except RuntimeError:
+        # Check if TPU is available via torch_xla
+        device = xm.xla_device()  # Assign the TPU device
+        print(f"Using device: {device}")  # Prints TPU device details
+    except RuntimeError as e:
         # If TPU isn't available, check for GPU or fallback to CPU
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {device}")  #
 
 
 
