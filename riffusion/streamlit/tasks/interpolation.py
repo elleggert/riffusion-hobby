@@ -13,6 +13,8 @@ import torch
 from riffusion.datatypes import InferenceInput, PromptInput
 from riffusion.spectrogram_params import SpectrogramParams
 from riffusion.streamlit import util as streamlit_util
+from riffusion.util import audio_util
+
 
 
 def render() -> None:
@@ -410,6 +412,9 @@ def prepare_interpolation(
     image_list: T.List[Image.Image] = []
     audio_bytes_list: T.List[io.BytesIO] = []
 
+    result_segments: T.List[pydub.AudioSegment] = []
+
+
     for i, alpha in enumerate(alphas):
         print(f"#### ({i + 1} / {len(alphas)}) Alpha={alpha:.2f}")
         inputs = InferenceInput(
@@ -433,9 +438,27 @@ def prepare_interpolation(
 
         image = image.resize(init_image.size, Image.BICUBIC)
 
+        params = SpectrogramParams(min_frequency=0,max_frequency=10000,)
 
         image_list.append(image)
+        riffed_segment = streamlit_util.audio_segment_from_spectrogram_image(
+            image=image,
+            params=params,
+            device=device,
+        )
         audio_bytes_list.append(audio_bytes)
+        
+        audio_bytes = io.BytesIO()
+        riffed_segment.export(audio_bytes, format="wav")
+
+        ########
+
+
+     
+
+    combined_segment = audio_util.stitch_segments(result_segments, crossfade_s=0.2)
+ 
+
 
     # Concatenate audio segments
     audio_segments = [pydub.AudioSegment.from_file(audio_bytes) for audio_bytes in audio_bytes_list]
@@ -447,7 +470,7 @@ def prepare_interpolation(
     concat_segment.export(final_audio_bytes, format=extension)
     final_audio_bytes.seek(0)
 
-    return final_audio_bytes
+    return final_audio_bytes, combined_segment
 
 
 def scale_image_to_32_stride(image: Image.Image) -> Image.Image:
