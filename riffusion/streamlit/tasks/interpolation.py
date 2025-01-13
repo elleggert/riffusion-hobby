@@ -245,7 +245,8 @@ def create_prompt_input(
     include_negative_prompt: bool = False,
     seed: int = 42,
     denoising: float = 0.5,
-    negative_prompt: str = ''
+    negative_prompt: str = '',
+    guidance: float = 1.0,
 ) -> PromptInput:
     """
     Create a PromptInput object based on the given arguments and validate the inputs.
@@ -279,7 +280,8 @@ def create_prompt_input(
         prompt=prompt,
         negative_prompt=negative_prompt if include_negative_prompt else '',
         seed=seed,
-        denoising=denoising
+        denoising=denoising,
+        guidance=1.0,
     )
 
 
@@ -411,8 +413,7 @@ def prepare_interpolation(
             num_inference_steps=num_inference_steps,
             seed_image_id="og_beat",
             start=prompt_a,
-            end=prompt_b,
-        )
+            end=prompt_b)
 
         image, audio_bytes = run_interpolation(
             inputs=inputs,
