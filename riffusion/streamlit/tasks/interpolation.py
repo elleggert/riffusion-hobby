@@ -9,7 +9,6 @@ import streamlit as st
 from PIL import Image
 
 import torch
-import torch_xla.core.xla_model as xm
 
 from riffusion.datatypes import InferenceInput, PromptInput
 from riffusion.spectrogram_params import SpectrogramParams
