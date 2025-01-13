@@ -224,11 +224,15 @@ class RiffusionPipeline(DiffusionPipeline):
                         channel (luminance) before use.
             use_reweighting: Use prompt reweighting
         """
+
+        print(inputs)
         alpha = inputs.alpha
         start = inputs.start
         end = inputs.end
 
         guidance_scale = start.guidance * (1.0 - alpha) + end.guidance * alpha
+        print(f"Guidance scale: {guidance_scale}")
+        print()
 
         # TODO(hayk): Always generate the seed on CPU?
         if self.device.lower().startswith("mps"):

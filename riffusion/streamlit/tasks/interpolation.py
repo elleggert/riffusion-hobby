@@ -244,7 +244,7 @@ def create_prompt_input(
     prompt: str,
     include_negative_prompt: bool = False,
     seed: int = 42,
-    denoising: float = 0.5,
+    denoising: float = 0.0,
     negative_prompt: str = '',
     guidance: float = 1.0,
 ) -> PromptInput:
@@ -388,7 +388,8 @@ def prepare_interpolation(
             raise ValueError("Custom seed image file must be provided when using 'custom'.")
         #init_image = Image.open(init_image_file).convert("RGB")
         init_image = init_image_file.convert("RGB")
-        print(init_image)
+        
+        print('Custom seed image provided')
 
         
     else:
@@ -408,6 +409,7 @@ def prepare_interpolation(
     audio_bytes_list: T.List[io.BytesIO] = []
 
     for i, alpha in enumerate(alphas):
+        print(f"#### ({i + 1} / {len(alphas)}) Alpha={alpha:.2f}")
         inputs = InferenceInput(
             alpha=float(alpha),
             num_inference_steps=num_inference_steps,
