@@ -368,10 +368,10 @@ def prepare_interpolation(
     
     # Check and assign the device
     if torch.cuda.is_available():
-        device = torch.device("cuda")  # Assign GPU device
+        device = "cuda"    # Assign GPU device
         print(f"Using GPU device: {device}")  # Prints GPU device details
     else:
-        device = torch.device("cpu")  # Fall back to CPU
+        device = "cpu" # Fall back to CPU
         print(f"Using CPU device: {device}")  
 
 
