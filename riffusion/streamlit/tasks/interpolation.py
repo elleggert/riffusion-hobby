@@ -447,6 +447,7 @@ def prepare_interpolation(
             device=device,
         )
         audio_bytes_list.append(audio_bytes)
+        result_segments.append(riffed_segment)
         
         audio_bytes = io.BytesIO()
         riffed_segment.export(audio_bytes, format="wav")
