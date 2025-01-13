@@ -405,6 +405,8 @@ def prepare_interpolation(
     alphas_shifted = (np.abs(alphas_shifted) ** alpha_power * np.sign(alphas_shifted) + 1) / 2
     alphas = alphas_shifted
 
+    init_image_resize = scale_image_to_32_stride(init_image)
+
     image_list: T.List[Image.Image] = []
     audio_bytes_list: T.List[io.BytesIO] = []
 
@@ -419,7 +421,7 @@ def prepare_interpolation(
 
         image, audio_bytes = run_interpolation(
             inputs=inputs,
-            init_image=init_image,
+            init_image=init_image_resize,
             device=device,
             extension=extension,
         )
@@ -428,6 +430,9 @@ def prepare_interpolation(
             print(f"#### ({i + 1} / {len(alphas)}) Alpha={alpha:.2f}")
             if show_images:
                 image.show()
+
+        image = image.resize(init_image.size, Image.BICUBIC)
+
 
         image_list.append(image)
         audio_bytes_list.append(audio_bytes)
@@ -444,3 +449,11 @@ def prepare_interpolation(
 
     return final_audio_bytes
 
+
+def scale_image_to_32_stride(image: Image.Image) -> Image.Image:
+    """
+    Scale an image to a size that is a multiple of 32.
+    """
+    closest_width = int(np.ceil(image.width / 32) * 32)
+    closest_height = int(np.ceil(image.height / 32) * 32)
+    return image.resize((closest_width, closest_height), Image.BICUBIC)
